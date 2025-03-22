@@ -55,32 +55,32 @@ start_frontend() {
     # Navigate to the frontend directory
     cd "$(dirname "$0")/frontend" || error_exit "Could not navigate to frontend directory"
     
-    # Install dependencies if needed
-    # if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/react-scripts" ]; then
-    #     echo "Installing frontend dependencies..."
-    #     npm install || error_exit "Failed to install frontend dependencies"
-    # fi
+    Install dependencies if needed
+    if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/react-scripts" ]; then
+        echo "Installing frontend dependencies..."
+        npm install || error_exit "Failed to install frontend dependencies"
+    fi
     
-    # Start the React development server in the background
-    # npm start > ../frontend.log 2>&1 &
-    # FRONTEND_PID=$!
+    Start the React development server in the background
+    npm start > ../frontend.log 2>&1 &
+    FRONTEND_PID=$!
     
-    # # Save the PID to a file
-    # echo $FRONTEND_PID > ../frontend.pid
-    # echo "Frontend server started with PID: $FRONTEND_PID"
-    # echo "Frontend logs being saved to frontend.log"
+    # Save the PID to a file
+    echo $FRONTEND_PID > ../frontend.pid
+    echo "Frontend server started with PID: $FRONTEND_PID"
+    echo "Frontend logs being saved to frontend.log"
     npm start
     # Return to the original directory
     cd - > /dev/null
 }
 
 # Start both servers
-start_backend
+#start_backend
 start_frontend
 
 echo ""
 echo "Feature Engineering App is now running!"
-echo "- Backend: http://localhost:8000"
+#echo "- Backend: http://localhost:8000"
 echo "- Frontend: http://localhost:3000"
 echo ""
 echo "To stop the application, run ./stop_app.sh"

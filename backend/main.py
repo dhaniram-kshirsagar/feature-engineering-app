@@ -25,15 +25,10 @@ sys.path.append('/Users/dhani/GitHub')
 try:
     from ai_data_science_team.agents.feature_engineering_agent import FeatureEngineeringAgent
     from langchain_openai import ChatOpenAI
-    from langgraph.checkpoint.memory import MemorySaver
-    import msgpack
-    import copy
 except ImportError:
     print("Error importing required modules. Make sure ai_data_science_team is installed.")
     FeatureEngineeringAgent = None
     ChatOpenAI = None
-    MemorySaver = None
-    msgpack = None
 
 # Set up logging
 logging.basicConfig(
@@ -407,7 +402,6 @@ def continue_feature_engineering_with_feedback(task_id: str, feedback: str, acce
                 "execution_globals": {
                     "pd": pd,
                     "np": __import__('numpy'),
-                    "plt": __import__('matplotlib.pyplot')
                 }
             }
         }
@@ -548,7 +542,6 @@ def process_feature_engineering(
                 "execution_globals": {
                     "pd": pd,
                     "np": __import__('numpy'),
-                    "plt": __import__('matplotlib.pyplot')
                 }
             }
         }
@@ -561,6 +554,23 @@ def process_feature_engineering(
             "max_retries": 3,
             "retry_count": 0
         }, config=config)
+        
+        # After receiving the feature_engineer_function, ensure it has pandas imported
+        if "feature_engineer_function" in response and response["feature_engineer_function"]:
+            # Extract the function code
+            function_code = response["feature_engineer_function"]
+            
+            # Check if pandas is imported in the function
+            if "import pandas" not in function_code and "import pd" not in function_code:
+                # Add pandas import to the top of the function
+                function_code = "import pandas as pd\n" + function_code
+                response["feature_engineer_function"] = function_code
+                
+                # Save the updated function code back to file if one exists
+                if "feature_engineer_function_path" in response and response["feature_engineer_function_path"]:
+                    with open(response["feature_engineer_function_path"], 'w') as f:
+                        f.write(function_code)
+                        logger.info(f"Updated feature engineering function with pandas import")
         
         # Check if we need human feedback based on agent's state
         try:
