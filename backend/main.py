@@ -450,6 +450,18 @@ def continue_feature_engineering_with_feedback(task_id: str, feedback: str, acce
         # Store the response
         task["response"] = response
         
+        # Store the updated recommendations if they exist
+        if "recommended_steps" in response:
+            task["recommended_steps"] = response["recommended_steps"]
+            logger.info(f"Updated recommendations based on feedback for task {task_id}")
+            
+            # If the user didn't accept the recommendations, set the status back to awaiting_feedback
+            if not accept_recommendations:
+                task["status"] = "awaiting_feedback"
+                logger.info(f"Task {task_id} set back to awaiting_feedback with updated recommendations")
+                save_tasks_to_disk()
+                return {"status": task["status"]}
+        
         # Check if the feature engineering is complete
         if "data_engineered" in response and response["data_engineered"] is not None:
             # Successful feature engineering with engineered data available

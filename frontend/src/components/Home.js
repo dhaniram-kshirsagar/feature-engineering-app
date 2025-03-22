@@ -42,6 +42,8 @@ const Home = () => {
   const [feedback, setFeedback] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
   const [recommendations, setRecommendations] = useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [recommendationsUpdated, setRecommendationsUpdated] = useState(false);
 
   // Function to handle file selection
   const handleFileChange = (event) => {
@@ -92,17 +94,31 @@ const Home = () => {
 
       if (status.status === 'awaiting_feedback') {
         console.log('Recommendations received:', status.recommended_steps);
+        
+        // Check if recommendations have changed after feedback
+        if (feedbackSubmitted && recommendations !== status.recommended_steps) {
+          setRecommendationsUpdated(true);
+        }
+        
+        // Always reset these states when we're in awaiting_feedback state
+        setFeedbackSubmitted(false);
+        setLoading(false);
+        // Don't clear feedback text field automatically
+        
         setRecommendations(status.recommended_steps || '');
         clearInterval(pollingInterval);
       } else if (status.status === 'completed') {
         setActiveStep(2);
+        setLoading(false);
         clearInterval(pollingInterval);
       } else if (status.status === 'failed') {
         setError(`Feature engineering failed: ${status.error}`);
+        setLoading(false);
         clearInterval(pollingInterval);
       }
     } catch (err) {
       console.error('Error in pollTaskStatus:', err);
+      setLoading(false);
       
       // Check if we got a 404 Not Found error, which might happen after server restart
       if (err.message.includes('404') || err.message.includes('not found')) {
@@ -129,6 +145,8 @@ const Home = () => {
 
     setLoading(true);
     setError(null);
+    setFeedbackSubmitted(true);
+    setRecommendationsUpdated(false);
 
     try {
       await provideFeedback(taskId, feedback, accept);
@@ -141,6 +159,8 @@ const Home = () => {
       setPollingInterval(interval);
     } catch (err) {
       console.error('Error in handleSubmitFeedback:', err);
+      setLoading(false);
+      setFeedbackSubmitted(false); // Reset this state on error
       
       // Special handling for 404 errors which might happen after server restart
       if (err.message.includes('404') || err.message.includes('not found')) {
@@ -151,8 +171,6 @@ const Home = () => {
       } else {
         setError(`Error submitting feedback: ${err.message}`);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -274,6 +292,12 @@ const Home = () => {
           {taskStatus?.status === 'awaiting_feedback' ? (
             <>
               <Paper elevation={2} sx={{ p: 3, mb: 3, maxHeight: '400px', overflow: 'auto' }}>
+                {recommendationsUpdated && (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    Recommendations have been updated based on your feedback!
+                  </Alert>
+                )}
+                
                 {recommendations ? (
                   <ReactMarkdown>
                     {recommendations}
@@ -286,7 +310,9 @@ const Home = () => {
               </Paper>
               
               <Alert severity="info" sx={{ mb: 3 }}>
-                Note: If the server restarts during processing, your task data will be preserved.
+                {feedbackSubmitted ? 
+                  'Processing your feedback. Please wait...' : 
+                  'Review the recommendations and provide feedback if needed, or accept them to continue.'}
               </Alert>
               
               <Grid container spacing={3}>
@@ -299,6 +325,7 @@ const Home = () => {
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder="If you want to modify the recommendations, describe your changes here. Otherwise, click 'Accept Recommendations'."
                     fullWidth
+                    disabled={loading || feedbackSubmitted}
                   />
                 </Grid>
                 
@@ -306,10 +333,10 @@ const Home = () => {
                   <Button
                     variant="outlined"
                     onClick={() => handleSubmitFeedback(false)}
-                    disabled={loading || !feedback.trim()}
+                    disabled={loading || !feedback.trim() || feedbackSubmitted}
                     fullWidth
                   >
-                    Send Feedback
+                    {loading ? <CircularProgress size={24} /> : 'Send Feedback'}
                   </Button>
                 </Grid>
                 
@@ -318,10 +345,10 @@ const Home = () => {
                     variant="contained"
                     color="primary"
                     onClick={() => handleSubmitFeedback(true)}
-                    disabled={loading}
+                    disabled={loading || feedbackSubmitted}
                     fullWidth
                   >
-                    Accept Recommendations
+                    {loading ? <CircularProgress size={24} /> : 'Accept Recommendations'}
                   </Button>
                 </Grid>
               </Grid>
@@ -331,7 +358,9 @@ const Home = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <CircularProgress />
                 <Typography variant="body1" sx={{ ml: 2 }}>
-                  Processing your dataset and generating recommendations...
+                  {feedbackSubmitted ? 
+                    'Processing your feedback...' : 
+                    'Processing your dataset and generating recommendations...'}
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
